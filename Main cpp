@@ -1,0 +1,344 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <iomanip>
+#include <sstream>
+#include <cctype>
+
+class Student {
+private:
+    std::string id, name, dept;
+    int year;
+public:
+    Student() : id(""), name(""), dept(""), year(0) {}
+    Student(std::string i, std::string n, std::string d, int y) : id(i), name(n), dept(d), year(y) {}
+
+    std::string getId() const { return id; }
+    std::string getName() const { return name; }
+    std::string getDept() const { return dept; }
+    int getYear() const { return year; }
+
+    void display() const {
+        std::cout << std::left << std::setw(12) << id 
+                  << std::setw(20) << name 
+                  << std::setw(12) << dept 
+                  << std::setw(4) << year << std::endl;
+    }
+
+    std::string toString() const {
+        return id + "," + name + "," + dept + "," + std::to_string(year);
+    }
+
+    static Student fromString(const std::string& data) {
+        std::stringstream ss(data);
+        std::string i, n, d, y;
+        std::getline(ss, i, ','); std::getline(ss, n, ',');
+        std::getline(ss, d, ','); std::getline(ss, y, ',');
+        return Student(i, n, d, std::stoi(y));
+    }
+};
+
+class Session {
+private:
+    std::string course, date, startTime, duration;
+public:
+    Session() : course(""), date(""), startTime(""), duration("") {}
+    Session(std::string c, std::string d, std::string s, std::string dur) 
+        : course(c), date(d), startTime(s), duration(dur) {}
+
+    std::string getCourse() const { return course; }
+    std::string getDate() const { return date; }
+    std::string getStartTime() const { return startTime; }
+    std::string getDuration() const { return duration; }
+
+    std::string toString() const {
+        return course + "," + date + "," + startTime + "," + duration;
+    }
+
+    static Session fromString(const std::string& data) {
+        std::stringstream ss(data);
+        std::string c, d, s, dur;
+        std::getline(ss, c, ','); std::getline(ss, d, ',');
+        std::getline(ss, s, ','); std::getline(ss, dur, ',');
+        return Session(c, d, s, dur);
+    }
+
+    void display() const {
+        std::cout << std::left << std::setw(12) << course 
+                  << std::setw(12) << date 
+                  << std::setw(10) << startTime 
+                  << std::setw(6) << duration << std::endl;
+    }
+};
+
+class Attendance {
+private:
+    std::string studentId, status, course, date;
+public:
+    Attendance() : studentId(""), status(""), course(""), date("") {}
+    Attendance(std::string id, std::string s, std::string c, std::string d) 
+        : studentId(id), status(s), course(c), date(d) {}
+
+    std::string getId() const { return studentId; }
+    std::string getStatus() const { return status; }
+    std::string getCourse() const { return course; }
+    std::string getDate() const { return date; }
+    void setStatus(std::string s) { status = s; }
+
+    std::string toString() const {
+        return studentId + "," + status + "," + course + "," + date;
+    }
+};
+
+class System {
+private:
+    std::vector<Student> students;
+    std::vector<Session> sessions;
+    std::vector<Attendance> records;
+
+    const std::string STUDENT_FILE = "students.txt";
+    const std::string SESSION_FILE = "sessions.txt";
+    const std::string RECORD_FILE = "records.txt";
+
+    void loadData() {
+        std::ifstream sf(STUDENT_FILE);
+        if(sf.is_open()){
+            std::string line;
+            while(std::getline(sf,line)) if(!line.empty()) students.push_back(Student::fromString(line));
+            sf.close();
+        }
+
+        std::ifstream sesf(SESSION_FILE);
+        if(sesf.is_open()){
+            std::string line;
+            while(std::getline(sesf,line)) if(!line.empty()) sessions.push_back(Session::fromString(line));
+            sesf.close();
+        }
+
+        std::ifstream rf(RECORD_FILE);
+        if(rf.is_open()){
+            std::string line;
+            while(std::getline(rf,line)){
+                if(!line.empty()){
+                    std::stringstream ss(line);
+                    std::string id,status,course,date;
+                    std::getline(ss,id,','); std::getline(ss,status,',');
+                    std::getline(ss,course,','); std::getline(ss,date,',');
+                    records.push_back(Attendance(id,status,course,date));
+                }
+            }
+            rf.close();
+        }
+    }
+
+    void saveData() {
+        std::ofstream sf(STUDENT_FILE);
+        for(auto& s: students) sf << s.toString() << "\n";
+        sf.close();
+
+        std::ofstream sesf(SESSION_FILE);
+        for(auto& s: sessions) sesf << s.toString() << "\n";
+        sesf.close();
+
+        std::ofstream rf(RECORD_FILE);
+        for(auto& r: records) rf << r.toString() << "\n";
+        rf.close();
+    }
+
+    Student* findStudent(std::string id){
+        for(auto& s: students) if(s.getId()==id) return &s;
+        return nullptr;
+    }
+
+public:
+    System(){ loadData(); }
+
+    void run() {
+        std::cout << "--- DIGITAL ATTENDANCE SYSTEM ---\n";
+        std::cout << "Choose one option (program exits after completion):\n";
+        std::cout << "1. Register Student\n2. View Students\n3. Add Session\n4. View Sessions\n5. Mark Attendance\n";
+        std::cout << "6. View Attendance\n7. Attendance Summary\n8. Update Attendance\n";
+        std::cout << "9. Export to Excel\n10. Delete Student\n11. Delete Session\n12. Delete Attendance\n13. Clear All Data\n";
+        std::cout << "Enter choice: ";
+        int choice; std::cin >> choice;
+
+        switch(choice){
+            case 1: registerStudent(); break;
+            case 2: viewStudents(); break;
+            case 3: createSession(); break;
+            case 4: viewSessions(); break;
+            case 5: markAttendance(); break;
+            case 6: viewAttendance(); break;
+            case 7: attendanceSummary(); break;
+            case 8: updateAttendance(); break;
+            case 9: exportToExcel(); break;
+            case 10: deleteStudent(); break;
+            case 11: deleteSession(); break;
+            case 12: deleteAttendance(); break;
+            case 13: clearAllData(); break;
+            default: std::cout << "Invalid choice!\n";
+        }
+
+        saveData();
+        std::cout << "\nProgram completed and exiting...\n";
+    }
+
+    // === STUDENT FUNCTIONS ===
+    void registerStudent(){
+        std::string id,name,dept; int year;
+        std::cout<<"ID: "; std::cin>>id;
+        if(findStudent(id)){ std::cout<<"ID exists!\n"; return; }
+        std::cin.ignore();
+        std::cout<<"Name: "; std::getline(std::cin,name);
+        std::cout<<"Dept: "; std::getline(std::cin,dept);
+        std::cout<<"Year: "; std::cin>>year;
+        students.push_back(Student(id,name,dept,year));
+        std::cout<<"✓ Student added!\n";
+    }
+
+    void viewStudents(){
+        if(students.empty()){ std::cout<<"No students.\n"; return; }
+        std::cout<<std::left<<std::setw(12)<<"ID"<<std::setw(20)<<"Name"<<std::setw(12)<<"Dept"<<"Year\n";
+        for(auto& s: students) s.display();
+    }
+
+    // === SESSION FUNCTIONS ===
+    void createSession(){
+        std::cin.ignore();
+        std::string course,date,start,duration;
+        std::cout<<"Course: "; std::getline(std::cin,course);
+        std::cout<<"Date (DD/MM): "; std::getline(std::cin,date);
+        std::cout<<"Start Time (HH:MM): "; std::getline(std::cin,start);
+        std::cout<<"Duration (HH:MM): "; std::getline(std::cin,duration);
+        sessions.push_back(Session(course,date,start,duration));
+        std::cout<<"✓ Session created!\n";
+    }
+
+    void viewSessions(){
+        if(sessions.empty()){ std::cout<<"No sessions.\n"; return; }
+        std::cout<<std::left<<std::setw(12)<<"Course"<<std::setw(12)<<"Date"<<std::setw(10)<<"Start"<<std::setw(6)<<"Dur\n";
+        for(auto& s: sessions) s.display();
+    }
+
+    void deleteStudent(){
+        std::string id; std::cout<<"Enter ID to delete: "; std::cin>>id;
+        for(size_t i=0;i<students.size();i++){
+            if(students[i].getId()==id){
+                students.erase(students.begin()+i);
+                std::cout<<"✓ Student deleted!\n"; return;
+            }
+        }
+        std::cout<<"Student not found!\n";
+    }
+
+    void deleteSession(){
+        if(sessions.empty()){ std::cout<<"No sessions.\n"; return; }
+        viewSessions();
+        std::cout<<"Enter session number to delete: "; size_t n; std::cin>>n;
+        if(n<1 || n>sessions.size()){ std::cout<<"Invalid session number!\n"; return; }
+        sessions.erase(sessions.begin()+n-1);
+        std::cout<<"✓ Session deleted!\n";
+    }
+
+    void deleteAttendance(){
+        if(records.empty()){ std::cout<<"No attendance records.\n"; return; }
+        records.clear();
+        std::cout<<"✓ All attendance records deleted!\n";
+    }
+
+    void clearAllData(){
+        students.clear(); sessions.clear(); records.clear();
+        std::cout<<"✓ All data cleared!\n";
+    }
+
+    // === ATTENDANCE FUNCTIONS ===
+    void markAttendance(){
+        if(students.empty()){ std::cout<<"No students.\n"; return; }
+        if(sessions.empty()){ std::cout<<"No sessions.\n"; return; }
+
+        std::cout<<"Choose session:\n";
+        for(size_t i=0;i<sessions.size();i++){ std::cout<<i+1<<". "; sessions[i].display(); }
+        int choice; std::cin>>choice;
+        if(choice<1||choice>(int)sessions.size()){ std::cout<<"Invalid session.\n"; return; }
+        Session ses = sessions[choice-1];
+
+        for(auto& s: students){
+            std::cout<<s.getId()<<" - "<<s.getName()<<"\n[P] Present [A] Absent [L] Late: ";
+            char ch; std::cin>>ch;
+            std::string status = (toupper(ch)=='P')?"Present":(toupper(ch)=='L'?"Late":"Absent");
+            records.push_back(Attendance(s.getId(),status,ses.getCourse(),ses.getDate()));
+        }
+        std::cout<<"✓ Attendance saved!\n";
+    }
+
+    void viewAttendance(){
+        if(records.empty()){ std::cout<<"No records.\n"; return; }
+        std::string course,date;
+        std::cout<<"Course (* for all): "; std::cin>>course;
+        std::cout<<"Date (* for all): "; std::cin>>date;
+
+        std::cout<<std::left<<std::setw(12)<<"ID"<<std::setw(20)<<"Name"<<std::setw(10)<<"Status"<<"Course Date\n";
+        for(auto& r: records){
+            if((course=="*"||r.getCourse()==course)&&(date=="*"||r.getDate()==date)){
+                std::string name="Unknown";
+                for(auto& s: students) if(s.getId()==r.getId()){ name=s.getName(); break; }
+                std::cout<<std::left<<std::setw(12)<<r.getId()<<std::setw(20)<<name
+                         <<std::setw(10)<<r.getStatus()<<r.getCourse()<<" "<<r.getDate()<<std::endl;
+            }
+        }
+    }
+
+    void attendanceSummary(){
+        std::string course,date;
+        std::cout<<"Course: "; std::cin>>course;
+        std::cout<<"Date: "; std::cin>>date;
+        int present=0,absent=0,late=0,total=0;
+        for(auto& r: records){
+            if(r.getCourse()==course && r.getDate()==date){
+                total++;
+                if(r.getStatus()=="Present") present++;
+                else if(r.getStatus()=="Absent") absent++;
+                else if(r.getStatus()=="Late") late++;
+            }
+        }
+        if(total==0){ std::cout<<"No records found!\n"; return; }
+        std::cout<<"Present: "<<present<<" ("<<(present*100/total)<<"%)\n";
+        std::cout<<"Absent: "<<absent<<" ("<<(absent*100/total)<<"%)\n";
+        std::cout<<"Late: "<<late<<" ("<<(late*100/total)<<"%)\n";
+        std::cout<<"Total: "<<total<<" students\n";
+    }
+
+    void updateAttendance(){
+        std::string id,course,date;
+        std::cout<<"Student ID: "; std::cin>>id;
+        std::cout<<"Course: "; std::cin>>course;
+        std::cout<<"Date: "; std::cin>>date;
+        for(auto& r: records){
+            if(r.getId()==id && r.getCourse()==course && r.getDate()==date){
+                std::cout<<"Current: "<<r.getStatus()<<"\nNew [P/A/L]: ";
+                char ch; std::cin>>ch;
+                r.setStatus((toupper(ch)=='P')?"Present":(toupper(ch)=='L'?"Late":"Absent"));
+                std::cout<<"✓ Updated!\n"; return;
+            }
+        }
+        std::cout<<"Record not found!\n";
+    }
+
+    void exportToExcel(){
+        std::ofstream f("attendance_export.csv");
+        f<<"StudentID,Name,Course,Date,Status\n";
+        for(auto& r: records){
+            std::string name="Unknown";
+            for(auto& s: students) if(s.getId()==r.getId()){ name=s.getName(); break; }
+            f<<r.getId()<<","<<name<<","<<r.getCourse()<<","<<r.getDate()<<","<<r.getStatus()<<"\n";
+        }
+        std::cout<<"✓ Exported to attendance_export.csv\n";
+    }
+};
+
+int main(){
+    System app;
+    app.run();
+    return 0;
+}
